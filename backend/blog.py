@@ -1,4 +1,5 @@
 from abc import ABC
+from typing import Any
 
 
 class BlogResponse(ABC):
@@ -22,7 +23,7 @@ class BlogSuccessResponse(BlogResponse):
 
     """
 
-    def __init__(self, result=None):
+    def __init__(self, result: Any = None):
         super().__init__(SUCCESS)
         self.result = result
 
@@ -78,6 +79,16 @@ def insert(new_post: dict) -> None:
     POSTS.append(new_post)
 
 
+def remove(post: dict) -> None:
+    """
+    Remove a post from the posts list.
+
+    Args:
+        - post: Post to be deleted
+    """
+    POSTS.remove(post)
+
+
 def get_all_posts() -> list:
     """
     Get all existente posts of the blog.
@@ -90,6 +101,26 @@ def get_all_posts() -> list:
     if posts:
         return posts
     return []
+
+
+def get_post_by_id(post_id: int) -> dict:
+    """
+    Fetch in the data a post with the given id number.
+
+    Args:
+        post_id: ID number.
+
+    Returns:
+        Tuple with the post found and the posts list.
+
+    """
+    try:
+        blog_posts = read_data()
+
+        return next((post for post in blog_posts if post["id"] == int(post_id)), None)
+
+    except Exception as e:
+        raise ValueError(f"Error fetching post by ID. Error: {e}")
 
 
 def next_id() -> int:
@@ -125,6 +156,32 @@ def create_post(user_input: dict) -> BlogResponse:
         insert(new_post)
 
         return BlogSuccessResponse(new_post)
+
+    except Exception as e:
+        return BlogFailedResponse({"message": "Unexpected error.", "code": 500})
+
+
+def delete_post(post_id: int) -> BlogResponse:
+    """
+    Delete post with the provided id.
+
+    Args:
+        post_id: Post unique id.
+
+    Returns:
+        status: True for successful operation and False for failed.
+        result: Operation result if status True
+        error: error dictionary if status is False
+    """
+    try:
+        post = get_post_by_id(post_id)
+        if not post:
+            return BlogFailedResponse({"message": "Post not found.", "code": 404})
+
+        remove(post)
+        return BlogSuccessResponse(
+            {"message": f"Post with id {post_id} has been deleted successfully."}
+        )
 
     except Exception as e:
         return BlogFailedResponse({"message": "Unexpected error.", "code": 500})

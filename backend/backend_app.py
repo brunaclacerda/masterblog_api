@@ -56,7 +56,7 @@ def add():
     missing_input = validate_input(user_input)
 
     if missing_input:
-        return {"error": missing_input}, 400
+        return jsonify({"error": missing_input}), 400
 
     # create a new post
     logger.debug("Create a new post.")
@@ -64,7 +64,31 @@ def add():
     if response.status:
         return jsonify(response.result), 201
 
-    return response.error, response.error["code"]
+    return jsonify(response.error), response.error["code"]
+
+
+@app.route("/api/posts/<int:post_id>", methods=["DELETE"])
+def delete_post(post_id):
+    """
+    Delete a post.
+
+    Args:
+        id: Post id to be deleted.
+
+    Returns:
+        Success: 200, {"message": "Post with id <id> has been deleted successfully."}
+
+        Post not found: 404, {”error”: “Post not found.”}
+    """
+
+    if int(post_id) == 0:
+        return {"message": "Invalid post id provided."}, 400
+
+    response = blog.delete_post(post_id)
+    if response.status:
+        return jsonify(response.result), 200
+
+    return jsonify(response.error), response.error["code"]
 
 
 def validate_input(user_input: dict) -> str | bool:
