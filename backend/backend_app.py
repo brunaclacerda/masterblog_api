@@ -91,6 +91,39 @@ def delete_post(post_id):
     return jsonify(response.error), response.error["code"]
 
 
+@app.route("/api/posts/<int:post_id>", methods=["PATCH"])
+def update(post_id):
+    """
+    Update a post.
+
+    Args:
+        id: Post id to be updated.
+        body: Fields to be updated. Omitted fields are not changed.
+
+    Returns:
+        Success: ‘200’, updated  stored post dictionary
+        Post not found:  ‘404’, {”error”: “Post not found.”}
+        Invalid ID:  ‘400’, {”error”: “Invalid post ID number provided.}
+        No input provided: ‘400’, {”error”: “No updates provided.”}
+        Invalid input: ‘400’, {”error”: “Failed validation description”}
+    """
+
+    if int(post_id) == 0:
+        return {"error": "Invalid post ID number provided."}, 400
+
+    user_input = request.get_json()
+
+    if not user_input or len(user_input) == 0:
+        return {"error": "No updates provided."}, 400
+
+    response = blog.update_post(user_input, post_id)
+
+    if response.status:
+        return jsonify(response.result), 200
+
+    return jsonify(response.error), response.error["code"]
+
+
 def validate_input(user_input: dict) -> str | bool:
     """
     Validate fields type, valid content, and required attributtes.

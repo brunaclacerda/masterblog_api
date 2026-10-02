@@ -62,6 +62,10 @@ POSTS = [
     {"id": 14, "title": "Fourteenth post", "content": "This is the fourteenth post."},
     {"id": 15, "title": "Fifteenth post", "content": "This is the fifteenth post."},
 ]
+POST_ATTR_CFG = {
+    "title": {"type": str, "min": 1, "required": True, "label": "Title"},
+    "content": {"type": str, "min": 1, "required": True, "label": "Content"},
+}
 
 
 def read_data():
@@ -103,7 +107,7 @@ def get_all_posts() -> list:
     return []
 
 
-def get_post_by_id(post_id: int) -> dict:
+def get_post_by_id(post_id: int) -> dict | None:
     """
     Fetch in the data a post with the given id number.
 
@@ -111,7 +115,8 @@ def get_post_by_id(post_id: int) -> dict:
         post_id: ID number.
 
     Returns:
-        Tuple with the post found and the posts list.
+        Post found or None.
+
 
     """
     try:
@@ -158,7 +163,7 @@ def create_post(user_input: dict) -> BlogResponse:
         return BlogSuccessResponse(new_post)
 
     except Exception as e:
-        return BlogFailedResponse({"message": "Unexpected error.", "code": 500})
+        return BlogFailedResponse({"error": "Unexpected error.", "code": 500})
 
 
 def delete_post(post_id: int) -> BlogResponse:
@@ -185,3 +190,75 @@ def delete_post(post_id: int) -> BlogResponse:
 
     except Exception as e:
         return BlogFailedResponse({"message": "Unexpected error.", "code": 500})
+
+
+def validate_upt(user_input: dict) -> tuple[bool, str | None]:
+    """
+    Validate fields type, valid content, and required attributtes.
+
+    Args:
+        post: Post data.
+
+    Returns:
+        String with the missing or invalid inputs.
+        False for No attributte missing or invalid.
+    """
+
+    error_messsage = ""
+    invalid_fields = []
+
+    for update in user_input.keys():
+        if update in POST_ATTR_CFG:
+            field_cfg = POST_ATTR_CFG[update]
+            if type(update) is not field_cfg["type"]:
+                error_messsage += f"{update['label']} provided is invalid. "
+            elif (
+                field_cfg.get("min", None)
+                and len(user_input[update].strip()) < field_cfg["min"]
+            ):
+                error_messsage += f"{field_cfg['label']} provided is invalid. "
+        else:
+            invalid_fields.append(update)
+
+    for field in invalid_fields:
+        user_input.pop(field)
+
+    if not user_input:
+        error_messsage = "No valid updates provided."
+
+    if not error_messsage:
+        return True, None
+    return False, error_messsage
+
+
+def update_post(user_input: dict, post_id: int) -> BlogResponse:
+    """
+    Update a post with the provided id.
+
+    Args:
+        user_input: Dictionary with the updates
+        post_id: Post unique id.
+
+    Returns:
+        status: True for successful operation and False for failed.
+        result: Operation result if status True
+        error: error dictionary if status is False
+    """
+
+    try:
+        is_valid, error = validate_upt(user_input)
+        if not is_valid:
+            return BlogFailedResponse({"error": error, "code": 400})
+
+        post = get_post_by_id(post_id)
+        if not post:
+            return BlogFailedResponse({"error": "Post not found.", "code": 404})
+
+        for update in user_input.keys():
+            post[update] = user_input[update]
+
+        return BlogSuccessResponse(post)
+
+    except Exception as e:
+        print(e)
+        return BlogFailedResponse({"error": "Unexpected error.", "code": 500})
