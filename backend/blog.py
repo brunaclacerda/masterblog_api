@@ -1,8 +1,10 @@
 import logging
 import operator
 from abc import ABC
-from typing import Any
 from datetime import date
+from typing import Any
+
+import data.data as db
 
 logger = logging.getLogger(__name__)
 
@@ -50,78 +52,6 @@ class BlogFailedResponse(BlogResponse):
 SUCCESS = True
 FAILED = False
 NOT_FOUND = False
-POSTS = [
-    {
-        "id": 1,
-        "title": "A Better Morning Protocol",
-        "content": "Pepper says coffee is not a food group. I disagree, but I also installed a hydration reminder in the armor. Progress means listening to good advice, even when it arrives before the first espresso.",
-        "author": "Tony Stark",
-        "date": "2026-09-18",
-    },
-    {
-        "id": 2,
-        "title": "The Shield Is Not a Shortcut",
-        "content": "Training with the shield teaches the same lesson every time: momentum matters, but control matters more. Take the time to learn the return path before you throw yourself into the fight.",
-        "author": "Steve Rogers",
-        "date": "2026-09-20",
-    },
-    {
-        "id": 3,
-        "title": "Three Ways to Spot a Bad Deal",
-        "content": "If someone offers you everything you want with no questions asked, ask more questions. If they call you family after five minutes, leave. If the room has red lighting, definitely leave.",
-        "author": "Natasha Romanoff",
-        "date": "2026-09-22",
-    },
-    {
-        "id": 4,
-        "title": "Storm-Watching From New Asgard",
-        "content": "A storm is not merely a warning. It is a conversation between sky and sea, reminding us that strength without purpose is only noise. Also, the goats remain forbidden from the roof.",
-        "author": "Thor Odinson",
-        "date": "2026-09-24",
-    },
-    {
-        "id": 5,
-        "title": "The Science of Taking a Breath",
-        "content": "When the problem gets bigger, my first instinct is to get bigger too. The better answer is often to pause, breathe, and make sure I am fighting the problem instead of everyone standing near it.",
-        "author": "Bruce Banner",
-        "date": "2026-09-26",
-    },
-    {
-        "id": 6,
-        "title": "Clint's Extremely Practical Picnic Guide",
-        "content": "Pack sandwiches. Bring a blanket. Do not invite anyone carrying experimental arrows. And if Scott says he can make the cooler bigger on the inside, politely say no.",
-        "author": "Clint Barton",
-        "date": "2026-09-28",
-    },
-    {
-        "id": 7,
-        "title": "Wakanda's Quiet Innovation",
-        "content": "Technology should serve people before it impresses them. The most meaningful advances are the ones that make a village safer, a journey easier, or a child more curious about tomorrow.",
-        "author": "Shuri",
-        "date": "2026-09-30",
-    },
-    {
-        "id": 8,
-        "title": "Friendly Neighborhood Field Notes",
-        "content": "Today's patrol results: returned one lost dog, helped three tourists find the subway, and prevented a bicycle theft. No cosmic disasters, which feels like a win. Also, please wear helmets.",
-        "author": "Peter Parker",
-        "date": "2026-10-01",
-    },
-    {
-        "id": 9,
-        "title": "On Choosing the Hard Right",
-        "content": "Power means little if it only protects what is convenient. We honor those who came before us by choosing compassion when it costs us something.",
-        "author": "Sam Wilson",
-        "date": "2026-10-02",
-    },
-    {
-        "id": 10,
-        "title": "A Small Practice in Magic",
-        "content": "Before attempting a new spell, make tea and clear your mind. An untidy room can be repaired; an untidy dimension is considerably more difficult to explain to the neighbors.",
-        "author": "Doctor Stephen Strange",
-        "date": "2026-10-03",
-    },
-]
 POST_ATTR_CFG = {
     "title": {"type": str, "min": 1, "required": True, "label": "Title"},
     "content": {"type": str, "min": 1, "required": True, "label": "Content"},
@@ -131,11 +61,6 @@ POST_ATTR_CFG = {
 }
 
 
-def read_data():
-    # TODO: read JSON file
-    return POSTS
-
-
 def insert(new_post: dict) -> None:
     """
     Insert a new record in the posts list.
@@ -143,7 +68,9 @@ def insert(new_post: dict) -> None:
     Args:
         - new_post: New post
     """
-    POSTS.append(new_post)
+    posts = db.read_data()
+    posts.append(new_post)
+    db.update_data(posts)
 
 
 def remove(post: dict) -> None:
@@ -153,7 +80,28 @@ def remove(post: dict) -> None:
     Args:
         - post: Post to be deleted
     """
-    POSTS.remove(post)
+    posts = db.read_data()
+    posts.remove(post)
+    db.update_data(posts)
+
+
+def update_data(post_updated: dict) -> None:
+    """
+    Update a post on the posts list.
+
+    Args:
+        - post: Post to be deleted
+    """
+    posts = db.read_data()
+    post_to_update = next(
+        (post for post in posts if post["id"] == int(post_updated["id"])), None
+    )
+    # for field, settings in POST_ATTR_CFG.items():
+    #     if settings.get("edible", True):
+    #         post_to_update[field] = post_updated[field]
+
+    post_to_update.update(post_updated)
+    db.update_data(posts)
 
 
 def get_all_posts(sort_args: tuple[str, bool] | None = None) -> list:
@@ -164,7 +112,7 @@ def get_all_posts(sort_args: tuple[str, bool] | None = None) -> list:
     Returns:
         A list of posts.
     """
-    posts = read_data()
+    posts = db.read_data()
     if posts:
         if sort_args:
             logger.debug("Sorting list by: %s", sort_args)
@@ -195,7 +143,7 @@ def get_post_by_id(post_id: int) -> dict | None:
 
     """
     try:
-        blog_posts = read_data()
+        blog_posts = db.read_data()
 
         return next((post for post in blog_posts if post["id"] == int(post_id)), None)
 
@@ -353,9 +301,10 @@ def update_post(user_input: dict, post_id: int) -> BlogResponse:
         if not post:
             return BlogFailedResponse({"error": "Post not found.", "code": 404})
 
-        for update in user_input.keys():
+        for update in user_input:
             post[update] = user_input[update]
 
+        update_data(post)
         return BlogSuccessResponse(post)
 
     except Exception as e:
@@ -390,7 +339,8 @@ def filter_posts(filters: dict) -> BlogResponse:
         )
 
     filtered_posts = []
-    for post in POSTS:
+    posts = get_all_posts()
+    for post in posts:
         match = all(
             check_filter(filter, value, post) for filter, value in filters.items()
         )
