@@ -28,7 +28,15 @@ def get_posts():
         - Success: ‘200’, list with all posts.
 
     """
-    return jsonify(blog.POSTS)
+    if request.args:
+        sort_by = request.args.get("sort", None)
+        if sort_by and sort_by in blog.POST_ATTR_CFG:
+            direction = request.args.get("direction", "asc").strip().casefold()
+            if direction not in ["desc", "asc"]:
+                direction = "asc"
+            return jsonify(blog.get_all_posts(sort_args=(sort_by, direction == "desc")))
+
+    return jsonify(blog.get_all_posts())
 
 
 @app.route("/api/posts", methods=["POST"])

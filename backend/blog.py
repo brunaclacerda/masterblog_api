@@ -1,4 +1,5 @@
 import logging
+import operator
 from abc import ABC
 from typing import Any
 
@@ -99,7 +100,7 @@ def remove(post: dict) -> None:
     POSTS.remove(post)
 
 
-def get_all_posts() -> list:
+def get_all_posts(sort_args: tuple[str, bool] | None = None) -> list:
     """
     Get all existente posts of the blog.
 
@@ -109,6 +110,12 @@ def get_all_posts() -> list:
     """
     posts = read_data()
     if posts:
+        if sort_args:
+            logger.debug("Sorting list by: %s", sort_args)
+            sorted_posts = sorted(
+                posts, key=operator.itemgetter(sort_args[0]), reverse=sort_args[1]
+            )
+            return sorted_posts
         return posts
     return []
 
