@@ -1,0 +1,231 @@
+{
+  "swagger": "2.0",
+  "info": {
+    "title": "Masterblog API",
+    "description": "A Flask API for listing, creating, updating, deleting, and searching in-memory blog posts.",
+    "version": "1.0.0"
+  },
+  "host": "localhost:5002",
+  "basePath": "/",
+  "schemes": ["http"],
+  "produces": ["application/json"],
+  "tags": [
+    {
+      "name": "Posts",
+      "description": "Operations for blog posts"
+    }
+  ],
+  "paths": {
+    "/api/posts": {
+      "get": {
+        "tags": ["Posts"],
+        "summary": "List posts",
+        "description": "Returns all posts. Results can be sorted by title, content, or id. Unknown sort fields are ignored, and an invalid direction defaults to ascending order.",
+        "parameters": [
+          {
+            "name": "sort",
+            "in": "query",
+            "description": "Field used to sort results.",
+            "type": "string",
+            "enum": ["title", "content", "id"]
+          },
+          {
+            "name": "direction",
+            "in": "query",
+            "description": "Sort direction. Defaults to asc.",
+            "type": "string",
+            "enum": ["asc", "desc"],
+            "default": "asc"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A list of posts. The list is empty when no posts are stored.",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#/definitions/Post"}
+            }
+          }
+        }
+      },
+      "post": {
+        "tags": ["Posts"],
+        "summary": "Create a post",
+        "description": "Creates a post and assigns the next available integer id. Title and content are required, non-empty strings.",
+        "consumes": ["application/json"],
+        "parameters": [
+          {
+            "name": "post",
+            "in": "body",
+            "required": true,
+            "schema": {"$ref": "#/definitions/PostInput"}
+          }
+        ],
+        "responses": {
+          "201": {
+            "description": "The created post.",
+            "schema": {"$ref": "#/definitions/Post"}
+          },
+          "400": {
+            "description": "The JSON body is missing, or title or content is missing, blank, or not a string.",
+            "schema": {"$ref": "#/definitions/Error"}
+          },
+          "500": {
+            "description": "An unexpected error occurred while creating the post.",
+            "schema": {"$ref": "#/definitions/Error"}
+          }
+        }
+      }
+    },
+    "/api/posts/{post_id}": {
+      "delete": {
+        "tags": ["Posts"],
+        "summary": "Delete a post",
+        "parameters": [{"$ref": "#/parameters/PostId"}],
+        "responses": {
+          "200": {
+            "description": "The post was deleted.",
+            "schema": {"$ref": "#/definitions/DeleteMessage"}
+          },
+          "400": {
+            "description": "post_id is zero.",
+            "schema": {"$ref": "#/definitions/DeleteMessage"}
+          },
+          "404": {
+            "description": "No post exists with the supplied id.",
+            "schema": {"$ref": "#/definitions/DeleteMessage"}
+          },
+          "500": {
+            "description": "An unexpected error occurred while deleting the post.",
+            "schema": {"$ref": "#/definitions/DeleteMessage"}
+          }
+        }
+      },
+      "patch": {
+        "tags": ["Posts"],
+        "summary": "Update a post",
+        "description": "Updates the supplied title, content, or both. Fields omitted from the body retain their existing values.",
+        "consumes": ["application/json"],
+        "parameters": [
+          {"$ref": "#/parameters/PostId"},
+          {
+            "name": "updates",
+            "in": "body",
+            "required": true,
+            "schema": {"$ref": "#/definitions/PostUpdate"}
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The updated post.",
+            "schema": {"$ref": "#/definitions/Post"}
+          },
+          "400": {
+            "description": "post_id is zero, the body is empty, or no valid updates were supplied.",
+            "schema": {"$ref": "#/definitions/Error"}
+          },
+          "404": {
+            "description": "No post exists with the supplied id.",
+            "schema": {"$ref": "#/definitions/Error"}
+          },
+          "500": {
+            "description": "An unexpected error occurred while updating the post.",
+            "schema": {"$ref": "#/definitions/Error"}
+          }
+        }
+      }
+    },
+    "/api/posts/search": {
+      "get": {
+        "tags": ["Posts"],
+        "summary": "Search posts",
+        "description": "Returns posts that match every supplied criterion. Text matching is case-insensitive and matches partial title or content values.",
+        "parameters": [
+          {
+            "name": "title",
+            "in": "query",
+            "description": "A case-insensitive partial title to match.",
+            "type": "string"
+          },
+          {
+            "name": "content",
+            "in": "query",
+            "description": "A case-insensitive partial content value to match.",
+            "type": "string"
+          },
+          {
+            "name": "id",
+            "in": "query",
+            "description": "An exact post id to match.",
+            "type": "integer"
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Posts that match the criteria, or an empty list when none match.",
+            "schema": {
+              "type": "array",
+              "items": {"$ref": "#/definitions/Post"}
+            }
+          },
+          "400": {
+            "description": "No criteria, a blank value, or an unsupported search field was provided.",
+            "schema": {"$ref": "#/definitions/Error"}
+          }
+        }
+      }
+    }
+  },
+  "parameters": {
+    "PostId": {
+      "name": "post_id",
+      "in": "path",
+      "description": "The numeric id of the post.",
+      "required": true,
+      "type": "integer",
+      "format": "int64",
+      "minimum": 0
+    }
+  },
+  "definitions": {
+    "Post": {
+      "type": "object",
+      "required": ["id", "title", "content"],
+      "properties": {
+        "id": {"type": "integer", "format": "int64", "example": 1},
+        "title": {"type": "string", "example": "First post"},
+        "content": {"type": "string", "example": "This is the first post."}
+      }
+    },
+    "PostInput": {
+      "type": "object",
+      "required": ["title", "content"],
+      "properties": {
+        "title": {"type": "string", "minLength": 1, "example": "My new post"},
+        "content": {"type": "string", "minLength": 1, "example": "This is the post content."}
+      }
+    },
+    "PostUpdate": {
+      "type": "object",
+      "minProperties": 1,
+      "properties": {
+        "title": {"type": "string", "minLength": 1, "example": "Updated title"},
+        "content": {"type": "string", "minLength": 1, "example": "Updated content"}
+      }
+    },
+    "Error": {
+      "type": "object",
+      "properties": {
+        "error": {"type": "string", "example": "No updates provided."},
+        "code": {"type": "integer", "example": 400}
+      }
+    },
+    "DeleteMessage": {
+      "type": "object",
+      "properties": {
+        "message": {"type": "string", "example": "Post with id 1 has been deleted successfully."},
+        "code": {"type": "integer", "example": 404}
+      }
+    }
+  }
+}

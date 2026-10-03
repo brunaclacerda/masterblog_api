@@ -2,11 +2,22 @@ import logging
 
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from flask_swagger_ui import get_swaggerui_blueprint
 
 import blog
 
 app = Flask(__name__)
 CORS(app)  # This will enable CORS for all routes
+
+# Setting API docs
+SWAGGER_URL = "/api/docs"
+API_URL = "/static/masterblog.json"
+swagger_ui_blueprint = get_swaggerui_blueprint(
+    SWAGGER_URL,
+    API_URL,
+    config={"app_name": "Masterblog API"},
+)
+app.register_blueprint(swagger_ui_blueprint, url_prefix=SWAGGER_URL)
 
 # Configure logging
 logging.basicConfig(
@@ -59,7 +70,7 @@ def add():
 
     # Method POST
     logger.debug("Read payload")
-    user_input = request.get_json()
+    user_input = request.get_json(silent=True)
     logger.debug("Validate payload")
     missing_input = validate_input(user_input)
 
@@ -119,7 +130,7 @@ def update(post_id):
     if int(post_id) == 0:
         return {"error": "Invalid post ID number provided."}, 400
 
-    user_input = request.get_json()
+    user_input = request.get_json(silent=True)
 
     if not user_input or len(user_input) == 0:
         return {"error": "No updates provided."}, 400
