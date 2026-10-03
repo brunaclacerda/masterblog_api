@@ -2,6 +2,7 @@ import logging
 import operator
 from abc import ABC
 from typing import Any
+from datetime import date
 
 logger = logging.getLogger(__name__)
 
@@ -50,28 +51,83 @@ SUCCESS = True
 FAILED = False
 NOT_FOUND = False
 POSTS = [
-    {"id": 1, "title": "First post", "content": "This is the first post."},
-    {"id": 2, "title": "Second post", "content": "This is the second post."},
-    {"id": 3, "title": "Third post", "content": "This is the third post."},
-    {"id": 4, "title": "Fourth post", "content": "This is the fourth post."},
-    {"id": 5, "title": "Fifth post", "content": "This is the fifth post."},
-    {"id": 6, "title": "Sixth post", "content": "This is the sixth post."},
-    {"id": 7, "title": "Seventh post", "content": "This is the seventh post."},
-    {"id": 8, "title": "Eighth post", "content": "This is the eighth post."},
-    {"id": 9, "title": "Ninth post", "content": "This is the ninth post."},
-    {"id": 10, "title": "Tenth post", "content": "This is the tenth post."},
-    {"id": 11, "title": "Eleventh post", "content": "This is the eleventh post."},
-    {"id": 12, "title": "Twelfth post", "content": "This is the twelfth post."},
-    {"id": 13, "title": "Thirteenth post", "content": "This is the thirteenth post."},
-    {"id": 14, "title": "Fourteenth post", "content": "This is the fourteenth post."},
-    {"id": 15, "title": "Fifteenth post", "content": "This is the fifteenth post."},
+    {
+        "id": 1,
+        "title": "A Better Morning Protocol",
+        "content": "Pepper says coffee is not a food group. I disagree, but I also installed a hydration reminder in the armor. Progress means listening to good advice, even when it arrives before the first espresso.",
+        "author": "Tony Stark",
+        "date": "2026-09-18",
+    },
+    {
+        "id": 2,
+        "title": "The Shield Is Not a Shortcut",
+        "content": "Training with the shield teaches the same lesson every time: momentum matters, but control matters more. Take the time to learn the return path before you throw yourself into the fight.",
+        "author": "Steve Rogers",
+        "date": "2026-09-20",
+    },
+    {
+        "id": 3,
+        "title": "Three Ways to Spot a Bad Deal",
+        "content": "If someone offers you everything you want with no questions asked, ask more questions. If they call you family after five minutes, leave. If the room has red lighting, definitely leave.",
+        "author": "Natasha Romanoff",
+        "date": "2026-09-22",
+    },
+    {
+        "id": 4,
+        "title": "Storm-Watching From New Asgard",
+        "content": "A storm is not merely a warning. It is a conversation between sky and sea, reminding us that strength without purpose is only noise. Also, the goats remain forbidden from the roof.",
+        "author": "Thor Odinson",
+        "date": "2026-09-24",
+    },
+    {
+        "id": 5,
+        "title": "The Science of Taking a Breath",
+        "content": "When the problem gets bigger, my first instinct is to get bigger too. The better answer is often to pause, breathe, and make sure I am fighting the problem instead of everyone standing near it.",
+        "author": "Bruce Banner",
+        "date": "2026-09-26",
+    },
+    {
+        "id": 6,
+        "title": "Clint's Extremely Practical Picnic Guide",
+        "content": "Pack sandwiches. Bring a blanket. Do not invite anyone carrying experimental arrows. And if Scott says he can make the cooler bigger on the inside, politely say no.",
+        "author": "Clint Barton",
+        "date": "2026-09-28",
+    },
+    {
+        "id": 7,
+        "title": "Wakanda's Quiet Innovation",
+        "content": "Technology should serve people before it impresses them. The most meaningful advances are the ones that make a village safer, a journey easier, or a child more curious about tomorrow.",
+        "author": "Shuri",
+        "date": "2026-09-30",
+    },
+    {
+        "id": 8,
+        "title": "Friendly Neighborhood Field Notes",
+        "content": "Today's patrol results: returned one lost dog, helped three tourists find the subway, and prevented a bicycle theft. No cosmic disasters, which feels like a win. Also, please wear helmets.",
+        "author": "Peter Parker",
+        "date": "2026-10-01",
+    },
+    {
+        "id": 9,
+        "title": "On Choosing the Hard Right",
+        "content": "Power means little if it only protects what is convenient. We honor those who came before us by choosing compassion when it costs us something.",
+        "author": "Sam Wilson",
+        "date": "2026-10-02",
+    },
+    {
+        "id": 10,
+        "title": "A Small Practice in Magic",
+        "content": "Before attempting a new spell, make tea and clear your mind. An untidy room can be repaired; an untidy dimension is considerably more difficult to explain to the neighbors.",
+        "author": "Doctor Stephen Strange",
+        "date": "2026-10-03",
+    },
 ]
-STRING = str
-NUMBER = int
 POST_ATTR_CFG = {
-    "title": {"type": STRING, "min": 1, "required": True, "label": "Title"},
-    "content": {"type": STRING, "min": 1, "required": True, "label": "Content"},
-    "id": {"type": NUMBER, "edible": False, "label": "ID"},
+    "title": {"type": str, "min": 1, "required": True, "label": "Title"},
+    "content": {"type": str, "min": 1, "required": True, "label": "Content"},
+    "id": {"type": int, "edible": False, "label": "ID"},
+    "author": {"type": str, "min": 1, "label": "Author"},
+    "date": {"type": date, "label": "Creation date"},
 }
 
 
@@ -112,6 +168,12 @@ def get_all_posts(sort_args: tuple[str, bool] | None = None) -> list:
     if posts:
         if sort_args:
             logger.debug("Sorting list by: %s", sort_args)
+            if POST_ATTR_CFG[sort_args[0]]["type"] == date:
+                return sorted(
+                    posts,
+                    key=lambda post, col=sort_args[0]: parse_date(post[col]),
+                    reverse=sort_args[1],
+                )
             sorted_posts = sorted(
                 posts, key=operator.itemgetter(sort_args[0]), reverse=sort_args[1]
             )
@@ -122,10 +184,10 @@ def get_all_posts(sort_args: tuple[str, bool] | None = None) -> list:
 
 def get_post_by_id(post_id: int) -> dict | None:
     """
-    Fetch in the data a post with the given id number.
+    Fetch in the data a post with the given id int.
 
     Args:
-        post_id: ID number.
+        post_id: ID int.
 
     Returns:
         Post found or None.
@@ -148,7 +210,7 @@ def next_id() -> int:
     Returns:
         id: next ID
     """
-    # getting last ID number from posts list
+    # getting last ID int from posts list
     last_id = max((post["id"] for post in get_all_posts()), default=0)
     return last_id + 1
 
@@ -170,9 +232,12 @@ def create_post(user_input: dict) -> BlogResponse:
             "id": next_id(),
             "title": user_input["title"],
             "content": user_input["content"],
+            "author": user_input.get("author", None),
+            "date": user_input.get("date", None),
         }
 
         insert(new_post)
+        logger.debug(new_post)
 
         return BlogSuccessResponse(new_post)
 
@@ -216,28 +281,29 @@ def validate_upt(user_input: dict) -> tuple[bool, str | None]:
         post: Post data.
 
     Returns:
-        String with the missing or invalid inputs.
+        str with the missing or invalid inputs.
         False for No attributte missing or invalid.
     """
 
-    error_messsage = ""
+    error_message = ""
     invalid_fields = []
 
     # validate user input
-    for update in user_input.keys():
+    for update, value in user_input.items():
         if update in POST_ATTR_CFG and POST_ATTR_CFG[update].get(
             "edible", True
         ):  # check post dictionary settings
             field_cfg = POST_ATTR_CFG[update]
-            if type(update) is not field_cfg["type"]:
-                error_messsage += (
+            if field_cfg["type"] == date:
+                if not parse_date(value):
+                    error_message += "Date provided is invalid."
+            elif type(value) is not field_cfg["type"]:
+                error_message += (
                     f"{field_cfg['label']} provided is not {field_cfg['type']}."
                 )
-            elif (
-                field_cfg.get("min", None)
-                and len(user_input[update].strip()) < field_cfg["min"]
-            ):
-                error_messsage += f"{field_cfg['label']} provided is invalid. "
+            elif field_cfg.get("min", -1) > len(value.strip()):
+                error_message += f"{field_cfg['label']} provided is invalid. "
+
         else:
             logger.debug("Invalid input %s removed from updates.", update)
             invalid_fields.append(update)
@@ -246,11 +312,22 @@ def validate_upt(user_input: dict) -> tuple[bool, str | None]:
         user_input.pop(field)
 
     if not user_input:
-        error_messsage = "No valid updates provided."
+        error_message = "No valid updates provided."
 
-    if not error_messsage:
+    if not error_message:
         return True, None
-    return False, error_messsage
+    return False, error_message
+
+
+def parse_date(value: str) -> date | None:
+    """
+    Parse value to a ISO date.
+    """
+    try:
+        return date.fromisoformat(value)
+    except (TypeError, ValueError) as e:
+        logger.error("Error parsing date: %s", e)
+        return None
 
 
 def update_post(user_input: dict, post_id: int) -> BlogResponse:
@@ -327,12 +404,12 @@ def check_filter(term: str, value: str, post: dict) -> bool:
     """
     Helper function to check if post matches all search term
     """
-    if POST_ATTR_CFG[term]["type"] == STRING:
+    if POST_ATTR_CFG[term]["type"] == str:
         value_edt = value.casefold().strip()
         post_value_edt = post[term].casefold().strip()
         return post_value_edt.find(value_edt) >= 0
 
-    if POST_ATTR_CFG[term]["type"] == NUMBER and value.isnumeric():
+    if POST_ATTR_CFG[term]["type"] == int and value.isnumeric():
         return post[term] == int(value)
 
     return post[term] == value

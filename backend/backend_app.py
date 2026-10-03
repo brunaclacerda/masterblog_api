@@ -181,26 +181,28 @@ def validate_input(user_input: dict) -> str | bool:
         String with the missing or invalid inputs.
         False for No attributte missing or invalid.
     """
-    if user_input:
-        required_input = ["title", "content"]
-        input_not_found = next(
-            (
-                field
-                for field in required_input
-                if field not in user_input
-                or not isinstance(user_input[field], str)
-                or not user_input[field].strip()
-            ),
-            None,
-        )
-    else:
-        input_not_found = "all"
 
-    if input_not_found is not None:
-        logger.debug("Missing fields: %s", input_not_found)
-        return f"Please provide all required fields. Missing: {input_not_found}"
+    if not user_input:
+        return "Invalid request."
 
-    return False
+    error_message = ""
+    for field, settings in blog.POST_ATTR_CFG.items():
+        field_value = str(user_input.get(field, "")).strip()
+        if field_value:
+            if settings["type"] == blog.date:
+                if not blog.parse_date(user_input[field]):
+                    error_message += "Date provided is invalid."
+            elif type(user_input[field]) is not settings["type"]:
+                error_message += f"Field {field} expected: {settings['type']} received: {type(user_input[field])}. "
+
+                logger.info(error_message)
+            elif len(field_value) < settings.get("min", -1):
+                error_message += f"Invalid value provided for {field}. "
+
+        elif settings.get("required", False):
+            error_message += f"Required field not provided: {field}. "
+
+    return error_message
 
 
 if __name__ == "__main__":
