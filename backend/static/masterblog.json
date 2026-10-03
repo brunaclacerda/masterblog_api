@@ -2,7 +2,7 @@
   "swagger": "2.0",
   "info": {
     "title": "Masterblog API",
-    "description": "A Flask API for listing, creating, updating, deleting, and searching in-memory blog posts.",
+    "description": "A Flask API for listing, creating, updating, deleting, and searching JSON-backed blog posts.",
     "version": "1.0.0"
   },
   "host": "localhost:5002",
@@ -20,14 +20,14 @@
       "get": {
         "tags": ["Posts"],
         "summary": "List posts",
-        "description": "Returns all posts. Results can be sorted by title, content, or id. Unknown sort fields are ignored, and an invalid direction defaults to ascending order.",
+        "description": "Returns all posts. Results can be sorted by title, content, id, author, or date. Unknown sort fields are ignored, and an invalid direction defaults to ascending order.",
         "parameters": [
           {
             "name": "sort",
             "in": "query",
             "description": "Field used to sort results.",
             "type": "string",
-            "enum": ["title", "content", "id"]
+            "enum": ["title", "content", "id", "author", "date"]
           },
           {
             "name": "direction",
@@ -51,7 +51,7 @@
       "post": {
         "tags": ["Posts"],
         "summary": "Create a post",
-        "description": "Creates a post and assigns the next available integer id. Title and content are required, non-empty strings.",
+        "description": "Creates a post and assigns the next available integer id. Title and content are required, non-empty strings. Author and date are optional.",
         "consumes": ["application/json"],
         "parameters": [
           {
@@ -104,7 +104,7 @@
       "patch": {
         "tags": ["Posts"],
         "summary": "Update a post",
-        "description": "Updates the supplied title, content, or both. Fields omitted from the body retain their existing values.",
+        "description": "Updates one or more supplied title, content, author, or date fields. Fields omitted from the body retain their existing values.",
         "consumes": ["application/json"],
         "parameters": [
           {"$ref": "#/parameters/PostId"},
@@ -139,7 +139,7 @@
       "get": {
         "tags": ["Posts"],
         "summary": "Search posts",
-        "description": "Returns posts that match every supplied criterion. Text matching is case-insensitive and matches partial title or content values.",
+        "description": "Returns posts that match every supplied criterion. Text matching is case-insensitive and matches partial title, content, or author values.",
         "parameters": [
           {
             "name": "title",
@@ -158,6 +158,19 @@
             "in": "query",
             "description": "An exact post id to match.",
             "type": "integer"
+          },
+          {
+            "name": "author",
+            "in": "query",
+            "description": "A case-insensitive partial author name to match.",
+            "type": "string"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "description": "An exact ISO 8601 creation date to match.",
+            "type": "string",
+            "format": "date"
           }
         ],
         "responses": {
@@ -194,7 +207,9 @@
       "properties": {
         "id": {"type": "integer", "format": "int64", "example": 1},
         "title": {"type": "string", "example": "First post"},
-        "content": {"type": "string", "example": "This is the first post."}
+        "content": {"type": "string", "example": "This is the first post."},
+        "author": {"type": "string", "example": "Ada Lovelace"},
+        "date": {"type": "string", "format": "date", "example": "2026-10-03"}
       }
     },
     "PostInput": {
@@ -202,7 +217,9 @@
       "required": ["title", "content"],
       "properties": {
         "title": {"type": "string", "minLength": 1, "example": "My new post"},
-        "content": {"type": "string", "minLength": 1, "example": "This is the post content."}
+        "content": {"type": "string", "minLength": 1, "example": "This is the post content."},
+        "author": {"type": "string", "minLength": 1, "example": "Ada Lovelace"},
+        "date": {"type": "string", "format": "date", "example": "2026-10-03"}
       }
     },
     "PostUpdate": {
@@ -210,7 +227,9 @@
       "minProperties": 1,
       "properties": {
         "title": {"type": "string", "minLength": 1, "example": "Updated title"},
-        "content": {"type": "string", "minLength": 1, "example": "Updated content"}
+        "content": {"type": "string", "minLength": 1, "example": "Updated content"},
+        "author": {"type": "string", "minLength": 1, "example": "Ada Lovelace"},
+        "date": {"type": "string", "format": "date", "example": "2026-10-03"}
       }
     },
     "Error": {
