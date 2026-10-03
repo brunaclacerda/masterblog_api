@@ -14,7 +14,7 @@ logging.basicConfig(
     format="%(asctime)s %(levelname)s: %(message)s",
     datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = app.logger
+logger = logging.getLogger(__name__)
 
 
 @app.route("/api/posts", methods=["GET"])
@@ -124,6 +124,33 @@ def update(post_id):
     return jsonify(response.error), response.error["code"]
 
 
+@app.route("/api/posts/search")
+def search():
+    """
+    Operation: Search
+    Args:
+        Optional: query parameters with search criteria
+
+    Returns:
+        Success: ‘200’, list matched posts
+        No match:  ‘200’, []
+        None and blank or invalid search term: ‘400’,
+            {”error”: “Search term or value invalid.”}
+
+    """
+    if not request.args:
+        return {"error": "No search criteria provided."}, 400
+
+    logger.debug(request.args)
+
+    response = blog.filter_posts(request.args)
+
+    if response.status:
+        return jsonify(response.result), 200
+
+    return jsonify(response.error), response.error["code"]
+
+
 def validate_input(user_input: dict) -> str | bool:
     """
     Validate fields type, valid content, and required attributtes.
@@ -151,7 +178,7 @@ def validate_input(user_input: dict) -> str | bool:
         input_not_found = "all"
 
     if input_not_found is not None:
-        logger.debug(f"Missing fields: {input_not_found}")
+        logger.debug("Missing fields: %s", input_not_found)
         return f"Please provide all required fields. Missing: {input_not_found}"
 
     return False

@@ -1,5 +1,8 @@
+import logging
 from abc import ABC
 from typing import Any
+
+logger = logging.getLogger(__name__)
 
 
 class BlogResponse(ABC):
@@ -62,9 +65,12 @@ POSTS = [
     {"id": 14, "title": "Fourteenth post", "content": "This is the fourteenth post."},
     {"id": 15, "title": "Fifteenth post", "content": "This is the fifteenth post."},
 ]
+STRING = str
+NUMBER = int
 POST_ATTR_CFG = {
-    "title": {"type": str, "min": 1, "required": True, "label": "Title"},
-    "content": {"type": str, "min": 1, "required": True, "label": "Content"},
+    "title": {"type": STRING, "min": 1, "required": True, "label": "Title"},
+    "content": {"type": STRING, "min": 1, "required": True, "label": "Content"},
+    "id": {"type": NUMBER, "edible": False, "label": "ID"},
 }
 
 
@@ -135,6 +141,7 @@ def next_id() -> int:
     Returns:
         id: next ID
     """
+    # getting last ID number from posts list
     last_id = max((post["id"] for post in get_all_posts()), default=0)
     return last_id + 1
 
@@ -163,6 +170,7 @@ def create_post(user_input: dict) -> BlogResponse:
         return BlogSuccessResponse(new_post)
 
     except Exception as e:
+        logger.error("Error creating a post: %s", e)
         return BlogFailedResponse({"error": "Unexpected error.", "code": 500})
 
 
@@ -189,6 +197,7 @@ def delete_post(post_id: int) -> BlogResponse:
         )
 
     except Exception as e:
+        logger.error("Error deleting post %s: %s", post_id, e)
         return BlogFailedResponse({"message": "Unexpected error.", "code": 500})
 
 
@@ -207,17 +216,23 @@ def validate_upt(user_input: dict) -> tuple[bool, str | None]:
     error_messsage = ""
     invalid_fields = []
 
+    # validate user input
     for update in user_input.keys():
-        if update in POST_ATTR_CFG:
+        if update in POST_ATTR_CFG and POST_ATTR_CFG[update].get(
+            "edible", True
+        ):  # check post dictionary settings
             field_cfg = POST_ATTR_CFG[update]
             if type(update) is not field_cfg["type"]:
-                error_messsage += f"{update['label']} provided is invalid. "
+                error_messsage += (
+                    f"{field_cfg['label']} provided is not {field_cfg['type']}."
+                )
             elif (
                 field_cfg.get("min", None)
                 and len(user_input[update].strip()) < field_cfg["min"]
             ):
                 error_messsage += f"{field_cfg['label']} provided is invalid. "
         else:
+            logger.debug("Invalid input %s removed from updates.", update)
             invalid_fields.append(update)
 
     for field in invalid_fields:
@@ -262,3 +277,55 @@ def update_post(user_input: dict, post_id: int) -> BlogResponse:
     except Exception as e:
         print(e)
         return BlogFailedResponse({"error": "Unexpected error.", "code": 500})
+
+
+def filter_posts(filters: dict) -> BlogResponse:
+    """
+    Get posts list that match with user search criteria.
+
+
+    Returns:
+        status: True for successful operation and False for failed.
+        result: Operation result if status True
+        error: error dictionary if status is False
+    """
+
+    invalid_filters = next(
+        (
+            term
+            for term, value in filters.items()
+            if term not in POST_ATTR_CFG
+            or (isinstance(value, str) and value.strip() == "")
+        ),
+        None,
+    )
+
+    if invalid_filters:
+        return BlogFailedResponse(
+            {"error": "Search term or value invalid.", "code": 400}
+        )
+
+    filtered_posts = []
+    for post in POSTS:
+        match = all(
+            check_filter(filter, value, post) for filter, value in filters.items()
+        )
+        if match:
+            filtered_posts.append(post)
+
+    return BlogSuccessResponse(filtered_posts)
+
+
+def check_filter(term: str, value: str, post: dict) -> bool:
+    """
+    Helper function to check if post matches all search term
+    """
+    if POST_ATTR_CFG[term]["type"] == STRING:
+        value_edt = value.casefold().strip()
+        post_value_edt = post[term].casefold().strip()
+        return post_value_edt.find(value_edt) >= 0
+
+    if POST_ATTR_CFG[term]["type"] == NUMBER and value.isnumeric():
+        return post[term] == int(value)
+
+    return post[term] == value
